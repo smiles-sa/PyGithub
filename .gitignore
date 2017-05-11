@@ -35,3 +35,16 @@
 /developer.github.com/
 /gh-pages/
 /doc/doctrees/
+[Bb]in
+[Ii]nclude
+[Ll]ib
+[Ll]ib64
+[Ll]ocal
+[Ss]cripts
+[Ss]hare
+pyvenv.cfg
+.venv
+pip-selfcheck.json
+.cache
+__pycache__
+*.pyc
