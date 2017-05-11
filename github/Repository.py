@@ -2236,7 +2236,6 @@ class Repository(github.GithubObject.CompletableGithubObject):
             if restrictions is not github.GithubObject.NotSet:
                 post_parameters['restrictions'] = restrictions
 
-            print(post_parameters)
             headers, data = self._requester.requestJsonAndCheck(
                 "PUT",
                 self.url + "/branches/" + branch + "/protection",
