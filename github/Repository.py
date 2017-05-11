@@ -579,7 +579,7 @@ class Repository(github.GithubObject.CompletableGithubObject):
         """
         self._completeIfNotSet(self._subscribers_url)
         return self._subscribers_url.value
-    
+
     @property
     def subscribers_count(self):
         """
@@ -2202,37 +2202,83 @@ class Repository(github.GithubObject.CompletableGithubObject):
         else:
             return github.Commit.Commit(self._requester, headers, data, completed=True)
 
-    def protect_branch(self, branch, enabled, enforcement_level=github.GithubObject.NotSet, contexts=github.GithubObject.NotSet):
+    def protect_branch(self, branch, enabled, required_status_checks=github.GithubObject.NotSet, contexts=github.GithubObject.NotSet, enforce_admins=False, restrictions=github.GithubObject.NotSet):
         """
         :calls: `PATCH /repos/:owner/:repo/branches/:branch <https://developer.github.com/v3/repos/#enabling-and-disabling-branch-protection>`_
         :param branch: string
         :param enabled: boolean
-        :param enforcement_level: string
+        :param required_status_checks: string
         :param contexts: list of strings
+        :param enforce_admins: boolean
+        :param restrictions: dict with users and teams, each being a list of strings
         :rtype: None
         """
 
         assert isinstance(branch, (str, unicode))
         assert isinstance(enabled, bool)
-        assert enforcement_level is github.GithubObject.NotSet or isinstance(enforcement_level, (str, unicode)), enforcement_level
-        assert contexts is github.GithubObject.NotSet or all(isinstance(element, (str, unicode)) or isinstance(element, (str, unicode)) for element in contexts), contexts
+        assert isinstance(enforce_admins, bool)
+        assert required_status_checks is github.GithubObject.NotSet or isinstance(required_status_checks, bool), required_status_checks
+        assert contexts is github.GithubObject.NotSet or ( isinstance(contexts, (list, tuple)) and not isinstance(contexts, (str, unicode)) ), contexts
+        assert restrictions is github.GithubObject.NotSet or ( isinstance(restrictions, (dict)) and not isinstance(restrictions, (str, unicode)) ), restrictions
 
-        post_parameters = {
-            "protection": {}
-        }
-        if enabled is not github.GithubObject.NotSet:
-            post_parameters["protection"]["enabled"] = enabled
-        if enforcement_level is not github.GithubObject.NotSet:
-            post_parameters["protection"]["required_status_checks"] = {}
-            post_parameters["protection"]["required_status_checks"]["enforcement_level"] = enforcement_level
-        if contexts is not github.GithubObject.NotSet:
-            post_parameters["protection"]["required_status_checks"]["contexts"] = contexts
-        headers, data = self._requester.requestJsonAndCheck(
-            "PATCH",
-            self.url + "/branches/" + branch,
-            input=post_parameters,
-            headers={'Accept': 'application/vnd.github.loki-preview+json'}
-        )
+        if enabled:
+            post_parameters = {"required_status_checks":None, "enforce_admins": None, "restrictions": None, "required_pull_request_reviews": None  }
+            if required_status_checks is not github.GithubObject.NotSet:
+                post_parameters["required_status_checks"] = {}
+                post_parameters["required_status_checks"]["strict"] = True
+                if contexts is not github.GithubObject.NotSet:
+                    post_parameters["required_status_checks"]["contexts"] = contexts
+                else:
+                    post_parameters["required_status_checks"]["contexts"] = []
+
+            post_parameters["enforce_admins"] = enforce_admins
+
+            if restrictions is not github.GithubObject.NotSet:
+                post_parameters['restrictions'] = restrictions
+
+            print(post_parameters)
+            headers, data = self._requester.requestJsonAndCheck(
+                "PUT",
+                self.url + "/branches/" + branch + "/protection",
+                input=post_parameters,
+                headers={'Accept': 'application/vnd.github.loki-preview+json'}
+            )
+        else:
+            headers, data = self._requester.requestJsonAndCheck(
+                "DELETE",
+                self.url + "/branches/" + branch + "/protection",
+                headers={'Accept': 'application/vnd.github.loki-preview+json'}
+            )
+
+
+#         {
+#   "required_status_checks": {
+#     "strict": true,
+#     "contexts": [
+#       "continuous-integration/travis-ci"
+#     ]
+#   },
+#   "required_pull_request_reviews": {
+#     "dismissal_restrictions": {
+#       "users": [
+#         "octocat"
+#       ],
+#       "teams": [
+#         "justice-league"
+#       ]
+#     },
+#     "dismiss_stale_reviews": true
+#   },
+#   "enforce_admins": true,
+#   "restrictions": {
+#     "users": [
+#       "octocat"
+#     ],
+#     "teams": [
+#       "justice-league"
+#     ]
+#   }
+# }
 
     def remove_from_collaborators(self, collaborator):
         """
